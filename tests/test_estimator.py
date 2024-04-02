@@ -177,7 +177,6 @@ def test_numba_likelihood_estimator(data, request):
     assert model.fitted_
 
 
-@pytest.mark.skip(reason="A bug remain here, to be inestigated")
 @pytest.mark.parametrize("data_short", ["numpy"], indirect=True)
 def test_em_estimator(data_short, request):
     fun_lin = fl.functions.Linear()
