@@ -38,7 +38,7 @@ axs[1].grid()
 # Define model to simulate and type of simulator to use
 dt = 1e-3
 model_simu = fl.models.overdamped.Overdamped(force_function, diffusion=diff_function)
-simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt,k=20.0,xstop=6)
+simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt,k=10.0,xstop=6)
 
 
 # initialize positions
@@ -47,7 +47,7 @@ q0 = np.empty(ntraj)
 for i in range(len(q0)):
     q0[i] = -6
 # Calculate Trajectory
-time_steps = 15000
+time_steps = 20000
 data = simulator.run(time_steps, q0, save_every=1)
 
 # Plot resulting Trajectories
@@ -82,7 +82,7 @@ axb.set_ylabel("$A_{MLE}(X)$")
 axb.grid()
 axb.plot(xfa, free_energy(xfa.reshape(-1, 1)), label="Exact")
 
-n_knots= 5
+n_knots= 4
 domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min , data.stats.max , n_knots).ravel())
 trainmodel = fl.models.Overdamped(force=fl.functions.BSplinesFunction(domain), has_bias=True)
 for name,marker, transitioncls in zip(
