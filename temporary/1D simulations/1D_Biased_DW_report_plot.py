@@ -102,7 +102,7 @@ for name,marker, transitioncls in zip(
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axs[0].plot(xfa,res.force(xfa.reshape(-1,1)),marker,label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker, label=name)
-    axb.plot(xfa, fes-fes[16],marker, label=name)
+    axb.plot(xfa, fes-fes[15],marker, label=name)
 axb.legend()  
 axs[0].legend()
 axs[1].legend()

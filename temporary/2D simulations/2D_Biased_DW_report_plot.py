@@ -43,7 +43,7 @@ def colvar(x, y):
     return x + y, gradient  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
 
-dt = 10e-4
+dt = 5e-4
 model_simu = fl.models.overdamped.Overdamped(force=quartic2d, diffusion=diff_function)
 simulator = fl.simulations.ABMD_2D_to_1DColvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=25.0, qstop=1.7)
 
@@ -120,7 +120,7 @@ for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
         w[i] = np.dot(trj["x"][i], u_norm)
         b[i] = np.dot(trj["bias"][i], u_norm)
-    proj_data.append(fl.Trajectory(1e-3, deepcopy(w.reshape(len(trj["x"][:, 0]), 1)), bias=deepcopy(b.reshape(len(trj["bias"][:, 0]), 1))))
+    proj_data.append(fl.Trajectory(dt, deepcopy(w.reshape(len(trj["x"][:, 0]), 1)), bias=deepcopy(b.reshape(len(trj["bias"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
     axs.set_ylabel("$w(t)$")
@@ -131,10 +131,9 @@ for n, trj in enumerate(data):
 ##          MODEL TRAINING           ##
 #######################################
 checkpoint2 = time.time()
-
+plt.show()
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
-trainmodel = fl.models.OverdampedSplines1D(domain=domain)
-
+trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
 xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
 force_exact = (xfa**2 - 1.0) ** 2
 
@@ -148,6 +147,11 @@ axs[1].set_xlabel("$x$")
 axs[1].set_ylabel("$D(x)$")
 axs[1].grid()
 
+fig,axb = plt.subplots()
+axb.set_title("Free Energy (MLE)")
+axb.set_xlabel("$X$")
+axb.set_ylabel("$A_{MLE}(X)$")
+axb.grid()
 
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
@@ -161,18 +165,22 @@ for name,marker, transitioncls in zip(
     [
         fl.EulerDensity,
         fl.ElerianDensity,
-        fl.KesslerDensity,
-        fl.DrozdovDensity,
+        # fl.KesslerDensity,
+        # fl.DrozdovDensity,
     ],
 ):
-    estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)))
+    estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)),n_jobs=4)
     res = estimator.fit_fetch(deepcopy(proj_data))
+    res.remove_bias()
     print(name, res.coefficients)
     axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
+    fes = fl.analysis.free_energy_profile_1d(res,xfa)
+    axb.plot(xfa, fes-fes[16],marker, label=name)
 
 axs[0].legend()
 axs[1].legend()
+axb.legend()
 checkpoint3 = time.time()
 
 print("Training time =", checkpoint3 - checkpoint2, "seconds")
