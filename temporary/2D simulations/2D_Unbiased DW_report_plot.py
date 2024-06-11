@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import folie as fl
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
+import scipy as sc
 
 """ Script for simulation of 2D double well and projection along user provided direction, No fitting is carried out   """
 x = np.linspace(-1.8, 1.8, 12)
@@ -19,7 +20,7 @@ input = np.transpose(np.array([x, y]))
 
 D= np.array([0.5])
 diff_function = fl.functions.Polynomial(deg=0, coefficients=D * np.eye(2, 2))
-a, b = D*10.0, D*20.0
+a, b = D*5.0, D*10.0
 
 quartic2d = fl.functions.Quartic2D(a=a, b=b)
 
@@ -62,7 +63,7 @@ for i in range(ntraj):
         q0[i][j] = 0.000
 
 # Calculate Trajectory
-time_steps = 3000
+time_steps = 50000
 data = simulator.run(time_steps, q0, save_every=1)
 
 # Plot the resulting trajectories
@@ -127,5 +128,112 @@ for n, trj in enumerate(data):
     axs.set_ylabel("$w(t)$")
     axs.set_title("trajectory projected along $u =$" + str(u) + " direction")
     axs.grid()
+
+#############################################
+# Compute numerically the projected integral 
+#########################################
+
+
+domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
+trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=None)
+xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
+xfa =np.linspace(-1.6,1.6,75)
+
+
+
+fig, axs = plt.subplots(1, 2)
+axs[0].set_title("Force")
+axs[0].set_xlabel("$x$")
+axs[0].set_ylabel("$F(x)$")
+axs[0].grid()
+axs[1].set_title("Diffusion")
+axs[1].set_xlabel("$x$")
+axs[1].set_ylabel("$D(x)$")
+axs[1].grid()
+
+fig,axb = plt.subplots()
+axb.set_title("Free Energy (MLE)")
+axb.set_xlabel("$X$")
+axb.set_ylabel("$A_{MLE}(X)$")
+axb.grid()
+
+#############################################
+# Compute numerically the projected integral 
+#########################################
+x =np.linspace(-100,100,1000)
+a1,b1= 2.5,5
+q= np.linspace(-3,3,75)
+I=[]
+Z=[]
+A=[]
+for i in range(len(q)):
+    y = np.exp(-(a1*(x**2-1)**2 - b1*x**2 -2*np.sqrt(2)*b1*q[i]*x))
+    I.append(sc.integrate.simpson(y, x=x))
+    Z.append(np.exp(-2*b1*q[i]**2)*I[i])
+    A.append(-np.log(Z[i]))
+
+axb.plot(q/2,(A-A[37])/8,color="#bd041cff",label='Numerically integrated')
+
+##################################
+# compute empirical distribution #
+##################################
+
+bins=np.arange(-2,2,100)
+fig, axbins = plt.subplots(figsize=(8,6))
+kde_input=proj_data[0]["x"].T
+start = 500
+print(proj_data[0]["x"].T)
+for  i in range(1,len(proj_data)):
+    kde_input=np.concatenate((kde_input,proj_data[i]["x"][start:].T),axis=None)
+print(kde_input.shape)
+kde = sc.stats.gaussian_kde(kde_input,0.05)
+xx = np.linspace(-2, 2, 100)
+axbins.hist(kde_input, density=True, bins=100, alpha=0.75)
+axbins.plot(xx, kde(xx),color='red')
+
+axb.plot(q,-np.log(kde(q))+np.log(kde(q[37])),label="empirical")
+# plt.show()
+
+print(type(data[0]["x"]))
+
+
+
+
+fig, ax = plt.subplots()
+# ax.plot(x,y,label='Function to integrate')
+ax.plot(q,A,label='integrated')
+ax.legend()
+# plt.show()
+
+KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
+res_KM = KM_Estimator.fit_fetch(proj_data)
+
+axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
+axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
+print("KramersMoyal ", res_KM.coefficients)
+for name,marker,color, transitioncls in zip(
+    ["Euler", "Elerian", "Kessler", "Drozdov"],
+        ["|","1","2","3"],
+        ["#1f77b4ff","#9e4de6ff","#2ca02cff","#ff7f0eff"],
+    [
+        fl.EulerDensity,
+        fl.ElerianDensity,
+        fl.KesslerDensity,
+        fl.DrozdovDensity,
+    ],
+):
+    estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)),n_jobs=4)
+    res = estimator.fit_fetch(deepcopy(proj_data))
+    res.remove_bias()
+    print(name, res.coefficients)
+    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
+    axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
+    fes = fl.analysis.free_energy_profile_1d(res,xfa)
+    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
+axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
+
+axs[0].legend()
+axs[1].legend()
+axb.legend()
 
 plt.show()

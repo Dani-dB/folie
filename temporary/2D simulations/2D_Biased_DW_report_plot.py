@@ -11,13 +11,15 @@ import matplotlib.pyplot as plt
 import folie as fl
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
+from scipy import integrate
+import scipy as sc
 import time
 
 checkpoint1 = time.time()
 x = np.linspace(-1.8, 1.8, 36)
 y = np.linspace(-1.8, 1.8, 36)
 input = np.transpose(np.array([x, y]))
-D= np.array([0.5])
+D= 0.5
 diff_function = fl.functions.Polynomial(deg=0, coefficients=D * np.eye(2, 2))
 a, b = D*5.0, D*10.0
 quartic2d = fl.functions.Quartic2D(a=a, b=b)
@@ -39,8 +41,9 @@ ax.set_title("Force")
 
 ##Definition of the Collective variable function of old coordinates
 def colvar(x, y):
-    gradient = np.array([1, 1])
-    return x + y, gradient  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+    gradient = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
+    q= (x + y)/np.sqrt(2)
+    return q, gradient  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
 
 dt = 5e-4
@@ -135,6 +138,8 @@ plt.show()
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
 trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
 xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
+xfa =np.linspace(-1.6,1.6,75)
+
 force_exact = (xfa**2 - 1.0) ** 2
 
 fig, axs = plt.subplots(1, 2)
@@ -153,20 +158,56 @@ axb.set_xlabel("$X$")
 axb.set_ylabel("$A_{MLE}(X)$")
 axb.grid()
 
+#############################################
+# Compute numerically the projected integral 
+#########################################
+x =np.linspace(-100,100,1000)
+a1,b1= 2.5,5
+q= np.linspace(-1.6,1.6,75)
+I=[]
+Z=[]
+A=[]
+for i in range(len(q)):
+    y = np.exp(-(a1*(x**2-1)**2 - 0.5*b1*x**2 -np.sqrt(2)*b1*q[i]*x))
+    I.append(integrate.simpson(y, x=x))
+    Z.append(np.exp(-b1*q[i]**2)*I[i])
+    A.append(-np.log(Z[i]))
+
+
+##################################
+# compute empirical distribution #
+##################################
+
+bins=np.arange(-2,2,100)
+fig, axbins = plt.subplots(figsize=(8,6))
+kde_input=proj_data[0]["x"].T
+print(proj_data[0]["x"].T)
+for  i in range(1,len(proj_data)):
+    kde_input=np.concatenate((kde_input,proj_data[i]["x"].T),axis=None)
+print(kde_input.shape)
+kde = sc.stats.gaussian_kde(kde_input)
+xx = np.linspace(-2, 2, 100)
+axbins.hist(kde_input, density=True, bins=bins, alpha=0.8)
+axbins.plot(q, kde(q),color='red')
+
+axb.plot(q,-np.log(kde(q))+np.log(kde(q[37])),label="empirical estimation")
+
+
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
 
 axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
 axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
-for name,marker, transitioncls in zip(
+for name,marker,color, transitioncls in zip(
     ["Euler", "Elerian", "Kessler", "Drozdov"],
         ["|","1","2","3"],
+        ["#1f77b4ff","#9e4de6ff","#2ca02cff","#ff7f0eff"],
     [
         fl.EulerDensity,
         fl.ElerianDensity,
-        # fl.KesslerDensity,
-        # fl.DrozdovDensity,
+        fl.KesslerDensity,
+        fl.DrozdovDensity,
     ],
 ):
     estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)),n_jobs=4)
@@ -176,7 +217,8 @@ for name,marker, transitioncls in zip(
     axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes-fes[16],marker, label=name)
+    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
+axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
 axs[0].legend()
 axs[1].legend()
