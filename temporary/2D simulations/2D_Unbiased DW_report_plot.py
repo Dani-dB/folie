@@ -20,7 +20,7 @@ input = np.transpose(np.array([x, y]))
 
 D= np.array([0.5])
 diff_function = fl.functions.Polynomial(deg=0, coefficients=D * np.eye(2, 2))
-a, b = D*5.0, D*10.0
+a, b = D*5, D*10.0
 
 quartic2d = fl.functions.Quartic2D(a=a, b=b)
 
@@ -63,7 +63,7 @@ for i in range(ntraj):
         q0[i][j] = 0.000
 
 # Calculate Trajectory
-time_steps = 50000
+time_steps = 3000
 data = simulator.run(time_steps, q0, save_every=1)
 
 # Plot the resulting trajectories
@@ -108,7 +108,17 @@ for n, trj in enumerate(data):
     bb[0].set_title("X Dynamics")
     bb[1].set_title("Y Dynamics")
 
-
+#########################################################################
+# function to project along a given orthonormal specified by the angle
+########################################################################
+def project(trajectory,theta):
+    x_pt = trajectory[0]*np.cos(theta) + trajectory[1]*np.sin(theta)
+    y_pt = -trajectory[0]*np.sin(theta) + trajectory[1]*np.cos(theta)
+    return x_pt,y_pt
+def inverse_project(q,s,theta):
+    x = q*np.cos(theta) - s*np.sin(theta)
+    y = q*np.sin(theta) + s*np.cos(theta)
+    return x,y
 #########################################
 #  PROJECTION ALONG CHOSEN COORDINATE  #
 #########################################
@@ -117,11 +127,12 @@ for n, trj in enumerate(data):
 u = np.array([1, 1])
 u_norm = (1 / np.linalg.norm(u, 2)) * u
 w = np.empty_like(trj["x"][:, 0])
+s = np.empty_like(trj["x"][:, 0])
 proj_data = fl.Trajectories(dt=1e-3)
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
-        w[i] = np.dot(trj["x"][i], u_norm)
+        w[i], s[i]= project(trj["x"][i],np.pi/4)
     proj_data.append(fl.Trajectory(1e-3, deepcopy(w.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
@@ -129,9 +140,7 @@ for n, trj in enumerate(data):
     axs.set_title("trajectory projected along $u =$" + str(u) + " direction")
     axs.grid()
 
-#############################################
-# Compute numerically the projected integral 
-#########################################
+
 
 
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
@@ -161,18 +170,26 @@ axb.grid()
 # Compute numerically the projected integral 
 #########################################
 x =np.linspace(-100,100,1000)
-a1,b1= 2.5,5
-q= np.linspace(-3,3,75)
+a1,b1= 5,10
+s= np.linspace(-100,100,1001)
+q= np.linspace(-2,2,75)
+def mu(y):
+    return 0.5*b1*y**2
+def nu(x):
+    return a1*(x**-1)**2
+angle = np.pi/4
+
 I=[]
 Z=[]
 A=[]
 for i in range(len(q)):
-    y = np.exp(-(a1*(x**2-1)**2 - b1*x**2 -2*np.sqrt(2)*b1*q[i]*x))
-    I.append(sc.integrate.simpson(y, x=x))
-    Z.append(np.exp(-2*b1*q[i]**2)*I[i])
+    x_inv,y_inv=inverse_project(q[i],s,angle)
+    e = np.exp(-(a1*(x**2-1)**2 - 0.5*b1*x**2 -np.sqrt(2)*b1*q[i]*x))
+    e = np.exp(-(nu(x_inv) + mu(y_inv)))
+    Z.append(sc.integrate.simpson(e, x=s))
     A.append(-np.log(Z[i]))
 
-axb.plot(q/2,(A-A[37])/8,color="#bd041cff",label='Numerically integrated')
+axb.plot(q,(A-A[37]),color="#bd041cff",label='Numerically integrated on s')
 
 ##################################
 # compute empirical distribution #
@@ -181,7 +198,7 @@ axb.plot(q/2,(A-A[37])/8,color="#bd041cff",label='Numerically integrated')
 bins=np.arange(-2,2,100)
 fig, axbins = plt.subplots(figsize=(8,6))
 kde_input=proj_data[0]["x"].T
-start = 500
+start = 2000
 print(proj_data[0]["x"].T)
 for  i in range(1,len(proj_data)):
     kde_input=np.concatenate((kde_input,proj_data[i]["x"][start:].T),axis=None)
@@ -205,35 +222,35 @@ ax.plot(q,A,label='integrated')
 ax.legend()
 # plt.show()
 
-KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
-res_KM = KM_Estimator.fit_fetch(proj_data)
+# KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
+# res_KM = KM_Estimator.fit_fetch(proj_data)
 
-axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
-axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
-print("KramersMoyal ", res_KM.coefficients)
-for name,marker,color, transitioncls in zip(
-    ["Euler", "Elerian", "Kessler", "Drozdov"],
-        ["|","1","2","3"],
-        ["#1f77b4ff","#9e4de6ff","#2ca02cff","#ff7f0eff"],
-    [
-        fl.EulerDensity,
-        fl.ElerianDensity,
-        fl.KesslerDensity,
-        fl.DrozdovDensity,
-    ],
-):
-    estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)),n_jobs=4)
-    res = estimator.fit_fetch(deepcopy(proj_data))
-    res.remove_bias()
-    print(name, res.coefficients)
-    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
-    axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
-    fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
+# axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
+# axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
+# print("KramersMoyal ", res_KM.coefficients)
+# for name,marker,color, transitioncls in zip(
+#     ["Euler", "Elerian", "Kessler", "Drozdov"],
+#         ["|","1","2","3"],
+#         ["#1f77b4ff","#9e4de6ff","#2ca02cff","#ff7f0eff"],
+#     [
+#         fl.EulerDensity,
+#         fl.ElerianDensity,
+#         fl.KesslerDensity,
+#         fl.DrozdovDensity,
+#     ],
+# ):
+#     estimator = fl.LikelihoodEstimator(transitioncls(deepcopy(trainmodel)),n_jobs=4)
+#     res = estimator.fit_fetch(deepcopy(proj_data))
+#     res.remove_bias()
+#     print(name, res.coefficients)
+#     axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
+#     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
+#     fes = fl.analysis.free_energy_profile_1d(res,xfa)
+#     axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
+# axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
-axs[0].legend()
-axs[1].legend()
-axb.legend()
+# axs[0].legend()
+# axs[1].legend()
+# axb.legend()
 
 plt.show()
