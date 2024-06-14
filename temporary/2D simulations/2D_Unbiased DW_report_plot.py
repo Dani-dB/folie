@@ -45,7 +45,7 @@ model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=di
 simulator = fl.simulations.Simulator(fl.simulations.EulerStepper(model_simu), dt)
 
 # initialize positions
-ntraj = 50
+ntraj = 200
 q0 = np.empty(shape=[ntraj, 2])
 for i in range(ntraj):
     for j in range(2):
@@ -53,7 +53,9 @@ for i in range(ntraj):
 
 # Calculate Trajectory
 time_steps = 5000
-data = simulator.run(time_steps, q0, save_every=1)
+save_every = 1
+
+data = simulator.run(time_steps, q0, save_every=save_every)
 
 # Plot the resulting trajectories
 fig, axs = plt.subplots()
@@ -108,19 +110,20 @@ def project(trajectory,angle):
 #########################################
 #  PROJECTION ALONG CHOSEN COORDINATE  #
 #########################################
-
+def q(theta, x, y):                                                                 # here to change angle of projection
+    return np.cos(theta) * x + np.sin(theta) * y
 # Choose unit versor of direction
-theta = np.pi/2                                                                     # here to change angle of projection
-# theta=0
+# theta = np.pi/8                                                                     # here to change angle of projection
+theta=np.pi/20
 # u_norm = np.array([np.cos(theta), np.sin(theta)])
 w = np.empty_like(trj["x"][:, 0])
 s = np.empty_like(trj["x"][:, 0])
-proj_data = fl.Trajectories(dt=dt)
+proj_data = fl.Trajectories(dt=data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
-        w[i], s[i]= project(trj["x"][i],angle=theta)
-    proj_data.append(fl.Trajectory(dt, deepcopy(w.reshape(len(trj["x"][:, 0]), 1))))
+        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
+    proj_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
     axs.set_ylabel("$w(t)$")
@@ -140,11 +143,6 @@ x = np.linspace(-L, L, 100)
 y = np.linspace(-L, L, 100)
 X, Y = np.meshgrid(x, y)
 
-def q(x, y):
-    theta = 0.0
-    # theta = np.pi / 4
-    theta = np.pi/2                                                                     # here to change angle of projection
-    return np.cos(theta) * x + np.sin(theta) * y
 
 # Importance sampling parameters
 n_samples = 100000  # Number of samples
@@ -160,7 +158,7 @@ y_samples = np.random.uniform(y_min, y_max, n_samples)
 weights = np.exp(-beta * Pot(x_samples, y_samples))
 print(weights.shape)
 # Compute the collective variable values
-q_values = q(x_samples, y_samples)
+q_values = q(theta, x_samples, y_samples)
 
 # Weighted histogram the q values to estimate P(q)
 q_bins = np.linspace(-3, 3, 201)
