@@ -130,17 +130,70 @@ for n, trj in enumerate(data):
     axs.set_title("trajectory projected along $u =$" + str(u) + " direction")
     axs.grid()
 
-#######################################
-##          MODEL TRAINING           ##
-#######################################
-checkpoint2 = time.time()
-plt.show()
+#############################################################
+# CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
+#############################################################
+def Pot(x, y):
+    a = 2.5
+    b = 5
+    return a * (x**2 - 1)**2 + b * y**2
+
+L = 2.0
+x = np.linspace(-L, L, 100)
+y = np.linspace(-L, L, 100)
+X, Y = np.meshgrid(x, y)
+
+def q(x, y):
+    # theta = 0
+    # theta = np.pi / 4
+    theta = np.pi / 4
+    return np.cos(theta) * x + np.sin(theta) * y
+
+# Importance sampling parameters
+n_samples = 100000  # Number of samples
+beta = 1         # Inverse temperature (1/k_B T)
+x_min, x_max = -L, L
+y_min, y_max = -L, L
+
+# Generate uniform samples
+x_samples = np.random.uniform(x_min, x_max, n_samples)
+y_samples = np.random.uniform(y_min, y_max, n_samples)
+
+# Compute Boltzmann weights
+weights = np.exp(-beta * Pot(x_samples, y_samples))
+
+# Compute the collective variable values
+q_values = q(x_samples, y_samples)
+
+
+# Weighted histogram the q values to estimate P(q)
+q_bins = np.linspace(-3, 3, 201)
+hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+print('n of bin centers', len(bin_centers))
+# Compute the free energy A(q) = -k_B T ln P(q)
+P_q = hist + 1e-10  # Avoid log(0)
+A_q = -1 / beta * np.log(P_q)
+
+# Plot the free energy profile
+fig, ip = plt.subplots()
+ip.plot(bin_centers, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
+ip.set_xlabel('q')
+ip.set_ylabel('Free Energy A(q) ')
+ip.set_title('Free Energy Profile with beta = '+str(beta))
+
+
+############################################
+             #  TRAINING  #
+############################################
+
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
 trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
 xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
 xfa =np.linspace(-1.6,1.6,75)
 
-force_exact = (xfa**2 - 1.0) ** 2
+
 
 fig, axs = plt.subplots(1, 2)
 axs[0].set_title("Force")
@@ -157,41 +210,6 @@ axb.set_title("Free Energy (MLE)")
 axb.set_xlabel("$X$")
 axb.set_ylabel("$A_{MLE}(X)$")
 axb.grid()
-
-#############################################
-# Compute numerically the projected integral 
-#########################################
-x =np.linspace(-100,100,1000)
-a1,b1= 2.5,5
-q= np.linspace(-1.6,1.6,75)
-I=[]
-Z=[]
-A=[]
-for i in range(len(q)):
-    y = np.exp(-(a1*(x**2-1)**2 - 0.5*b1*x**2 -np.sqrt(2)*b1*q[i]*x))
-    I.append(integrate.simpson(y, x=x))
-    Z.append(np.exp(-b1*q[i]**2)*I[i])
-    A.append(-np.log(Z[i]))
-
-
-##################################
-# compute empirical distribution #
-##################################
-
-bins=np.arange(-2,2,100)
-fig, axbins = plt.subplots(figsize=(8,6))
-kde_input=proj_data[0]["x"].T
-print(proj_data[0]["x"].T)
-for  i in range(1,len(proj_data)):
-    kde_input=np.concatenate((kde_input,proj_data[i]["x"].T),axis=None)
-print(kde_input.shape)
-kde = sc.stats.gaussian_kde(kde_input)
-xx = np.linspace(-2, 2, 100)
-axbins.hist(kde_input, density=True, bins=bins, alpha=0.8)
-axbins.plot(q, kde(q),color='red')
-
-axb.plot(q,-np.log(kde(q))+np.log(kde(q[37])),label="empirical estimation")
-
 
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
@@ -218,14 +236,12 @@ for name,marker,color, transitioncls in zip(
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
+axb.plot(bin_centers, A_q - A_q[100],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
+
+# axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
 axs[0].legend()
 axs[1].legend()
 axb.legend()
-checkpoint3 = time.time()
-
-print("Training time =", checkpoint3 - checkpoint2, "seconds")
-print("Overall time =", checkpoint3 - checkpoint1, "seconds")
 
 plt.show()
