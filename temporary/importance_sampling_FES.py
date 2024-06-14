@@ -34,12 +34,12 @@ plt.show()
 def q(x, y):
     # theta = 0
     # theta = np.pi / 4
-    theta = np.pi / 2
+    theta = 0
     return np.cos(theta) * x + np.sin(theta) * y
 
 # Importance sampling parameters
 n_samples = 100000  # Number of samples
-beta = 1.0          # Inverse temperature (1/k_B T)
+beta = 10         # Inverse temperature (1/k_B T)
 x_min, x_max = -L, L
 y_min, y_max = -L, L
 
@@ -65,6 +65,6 @@ A_q = -1 / beta * np.log(P_q)
 # Plot the free energy profile
 plt.plot(bin_centers, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
 plt.xlabel('q')
-plt.ylabel('Free Energy A(q)')
-plt.title('Free Energy Profile')
+plt.ylabel('Free Energy A(q) ')
+plt.title('Free Energy Profile with beta = '+str(beta))
 plt.show()
