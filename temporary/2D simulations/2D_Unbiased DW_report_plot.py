@@ -45,7 +45,7 @@ model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=di
 simulator = fl.simulations.Simulator(fl.simulations.EulerStepper(model_simu), dt)
 
 # initialize positions
-ntraj = 200
+ntraj = 50
 q0 = np.empty(shape=[ntraj, 2])
 for i in range(ntraj):
     for j in range(2):
@@ -114,7 +114,7 @@ def q(theta, x, y):                                                             
     return np.cos(theta) * x + np.sin(theta) * y
 # Choose unit versor of direction
 # theta = np.pi/8                                                                     # here to change angle of projection
-theta=np.pi/20
+theta=np.pi/16
 # u_norm = np.array([np.cos(theta), np.sin(theta)])
 w = np.empty_like(trj["x"][:, 0])
 s = np.empty_like(trj["x"][:, 0])
@@ -161,21 +161,51 @@ print(weights.shape)
 q_values = q(theta, x_samples, y_samples)
 
 # Weighted histogram the q values to estimate P(q)
-q_bins = np.linspace(-3, 3, 201)
-hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+# q_bins = np.linspace(-3, 3, 201)
+# hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
+# bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-print('n of bin centers', len(bin_centers))
+ # Compute the KDE of the q values with weights
+kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
+q_bins = np.linspace(-3, 3, 101)
+P_q = kde(q_bins)
+
 # Compute the free energy A(q) = -k_B T ln P(q)
-P_q = hist + 1e-20  # Avoid log(0)
-A_q = -1 / beta * np.log(P_q)
+A_q = -1 / beta * np.log(P_q + 1e-20)
+
 
 # Plot the free energy profile
 fig, ip = plt.subplots()
-ip.plot(bin_centers, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
+ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
 ip.set_xlabel('q')
 ip.set_ylabel('Free Energy A(q) ')
 ip.set_title('Free Energy Profile with beta = '+str(beta))
+
+
+
+
+
+
+#  # Compute the KDE of the q values with weights
+# kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
+# q_bins = np.linspace(-3, 3, 100)
+# P_q = kde(q_bins)
+
+
+# cx = np.cos(theta)
+# cy = np.sin(theta)
+# # Plot the free energy profile -- Shift so that the minimum A(q) is zero
+# ax[1].plot(q_bins, A_q - np.min(A_q), label=f'{cx:.2f} x + {cy:.2f} y')
+
+
+
+
+
+
+
+
+
+
 
 
 ############################################
@@ -199,7 +229,7 @@ axs[1].set_ylabel("$D(x)$")
 axs[1].grid()
 
 fig,axb = plt.subplots()
-axb.set_title("Free Energy (MLE) projected along axis tilted by $\Theta = \pi/4$")
+axb.set_title("Free Energy (MLE) along frame rotated by $ϑ = \pi/4$")
 axb.set_xlabel("$q$")
 axb.set_ylabel("$A_{MLE}(q)$")
 axb.grid()
@@ -229,7 +259,7 @@ for name,marker,color, transitioncls in zip(
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(bin_centers, A_q - A_q[100],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
+axb.plot(q_bins, A_q - A_q[50],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
 
 # axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
