@@ -1,9 +1,9 @@
 """
 ================================
-2D Biased Double Well
+2D Double Well BIASED
 ================================
 
-Estimation of an overdamped Langevin in presence of biased dynamics.
+Estimation of an overdamped Langevin.
 """
 
 import numpy as np
@@ -11,63 +11,65 @@ import matplotlib.pyplot as plt
 import folie as fl
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
-from scipy import integrate
 import scipy as sc
-import time
 
-checkpoint1 = time.time()
-x = np.linspace(-1.8, 1.8, 36)
-y = np.linspace(-1.8, 1.8, 36)
+""" Script for simulation of 2D double well and projection along user provided direction, No fitting is carried out   """
+x = np.linspace(-1.8, 1.8, 20)
+y = np.linspace(-1.8, 1.8, 20)
 input = np.transpose(np.array([x, y]))
-D= 0.5
-diff_function = fl.functions.Polynomial(deg=0, coefficients=D * np.eye(2, 2))
-a, b = D*5.0, D*10.0
-quartic2d = fl.functions.Quartic2D(a=a, b=b)
+
+D=0.5
+diff_function= fl.functions.Polynomial(deg=0,coefficients=D * np.eye(2,2))
+a,b = 5, 10
+drift_quartic2d= fl.functions.Quartic2D(a=D*a,b=D*b)  # simple way to multiply D*Potential here force is the SDE force (meandispl)  ## use this when you need the drift ###
+quartic2d= fl.functions.Quartic2D(a=a,b=b)            # Real potential , here force is just -grad pot ## use this when you need the potential energy ###
+
 X, Y = np.meshgrid(x, y)
 
 # Plot potential surface
 pot = quartic2d.potential_plot(X, Y)
+print(pot.shape)
 fig = plt.figure()
 ax = plt.axes(projection="3d")
 ax.plot_surface(X, Y, pot, rstride=1, cstride=1, cmap="jet", edgecolor="none")
+ax.set_xlabel('$X$', fontsize=15)
+ax.set_ylabel('$Y$',fontsize=15)
+ax.zaxis.set_rotate_label(False) 
+ax.set_yticks([-1.5,0, 1.5])
+ax.set_xticks([-1.5,0, 1.5])
+ax.set_zticks([0,10, 35])
+ax.set_zlabel('$A(x,y)$', fontsize=18,rotation = 0)
 
-# Plot Force function
-ff = quartic2d.force(input)  # returns x and y components of the force : x_comp =ff[:,0] , y_comp =ff[:,1]
-U, V = np.meshgrid(ff[:, 0], ff[:, 1])
-fig, ax = plt.subplots()
-ax.quiver(x, y, U, V)
-ax.set_title("Force")
-
-
-##Definition of the Collective variable function of old coordinates
+def q(theta, x, y):                                                                 # here to change angle of projection
+    return np.cos(theta) * x + np.sin(theta) * y
+                                                               
+theta=np.pi/18
 def colvar(x, y):
-    gradient = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
-    q= (x + y)/np.sqrt(2)
-    return q, gradient  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+    theta = np.pi/18
 
+    return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
-dt = 5e-4
-model_simu = fl.models.overdamped.Overdamped(force=quartic2d, diffusion=diff_function)
-simulator = fl.simulations.ABMD_2D_to_1DColvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=25.0, qstop=1.7)
+dt=5e-4
+model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=diff_function)
+simulator = fl.simulations.ABMD_2D_to_1DColvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=25.0, qstop=2.2)
 
-# Choose number of trajectories and initialize positions
+# initialize positions
 ntraj = 50
 q0 = np.empty(shape=[ntraj, 2])
 for i in range(ntraj):
     for j in range(2):
-        q0[i][j] = -1.2
+        q0[i][j] = -1.8
 
-####################################
-##       CALCULATE TRAJECTORY     ##
-####################################
-
+# Calculate Trajectory
 time_steps = 5000
-data = simulator.run(time_steps, q0, save_every=1)
+save_every = 1
+
+data = simulator.run(time_steps, q0, save_every=save_every)
 
 # Plot the resulting trajectories
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
-    axs.plot(trj["x"][:, 0], trj["x"][:, 1])
+    axs.plot(trj["x"][:, 0], trj["x"][:, 1],alpha=0.4)
     axs.spines["left"].set_position("center")
     axs.spines["right"].set_color("none")
     axs.spines["bottom"].set_position("center")
@@ -77,11 +79,9 @@ for n, trj in enumerate(data):
     axs.set_xlabel("$X(t)$")
     axs.set_ylabel("$Y(t)$")
     axs.set_title("X-Y Trajectory")
-    axs.set_xlim(-1.8, 1.8)
-    axs.set_ylim(-1.8, 1.8)
     axs.grid()
 
-# plot x,y Trajectories in separate subplots
+# plot Trajectories
 fig, bb = plt.subplots(1, 2)
 for n, trj in enumerate(data):
     bb[0].plot(trj["x"][:, 0])
@@ -108,46 +108,40 @@ for n, trj in enumerate(data):
     bb[0].set_title("X Dynamics")
     bb[1].set_title("Y Dynamics")
 
+
 #########################################
-#  PROJECTION ALONG CHOSEN COORDINATE   #
+#  PROJECTION ALONG CHOSEN COORDINATE  #
 #########################################
 
-# Choose unit versor of direction
-u = np.array([1, 1])
-u_norm = (1 / np.linalg.norm(u, 2)) * u
+# u_norm = np.array([np.cos(theta), np.sin(theta)])
 w = np.empty_like(trj["x"][:, 0])
-b = np.empty_like(trj["x"][:, 0])
-proj_data = fl.data.trajectories.Trajectories(dt=dt)  # create new Trajectory object in which to store the projected trajectory dictionaries
+s = np.empty_like(trj["x"][:, 0])
+proj_data = fl.Trajectories(dt=data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
-        w[i] = np.dot(trj["x"][i], u_norm)
-        b[i] = np.dot(trj["bias"][i], u_norm)
-    proj_data.append(fl.Trajectory(dt, deepcopy(w.reshape(len(trj["x"][:, 0]), 1)), bias=deepcopy(b.reshape(len(trj["bias"][:, 0]), 1))))
+        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
+        s[i]= q(theta,trj["bias"][i][0],trj["bias"][i][1])
+    proj_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1)),bias = deepcopy(s.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
     axs.set_ylabel("$w(t)$")
-    axs.set_title("trajectory projected along $u =$" + str(u) + " direction")
+    axs.set_title("trajectory projected along q direction")
     axs.grid()
 
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
 #############################################################
 def Pot(x, y):
-    a = 2.5
-    b = 5
-    return a * (x**2 - 1)**2 + b * y**2
+    a = 5
+    b = 10
+    return a * (x**2 - 1)**2 + 0.5*b * y**2
 
 L = 2.0
 x = np.linspace(-L, L, 100)
 y = np.linspace(-L, L, 100)
 X, Y = np.meshgrid(x, y)
 
-def q(x, y):
-    # theta = 0
-    # theta = np.pi / 4
-    theta = np.pi / 4
-    return np.cos(theta) * x + np.sin(theta) * y
 
 # Importance sampling parameters
 n_samples = 100000  # Number of samples
@@ -161,27 +155,56 @@ y_samples = np.random.uniform(y_min, y_max, n_samples)
 
 # Compute Boltzmann weights
 weights = np.exp(-beta * Pot(x_samples, y_samples))
-
+print(weights.shape)
 # Compute the collective variable values
-q_values = q(x_samples, y_samples)
-
+q_values = q(theta, x_samples, y_samples)
 
 # Weighted histogram the q values to estimate P(q)
-q_bins = np.linspace(-3, 3, 201)
-hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+# q_bins = np.linspace(-3, 3, 201)
+# hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
+# bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-print('n of bin centers', len(bin_centers))
+ # Compute the KDE of the q values with weights
+kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
+q_bins = np.linspace(-3, 3, 101)
+P_q = kde(q_bins)
+
 # Compute the free energy A(q) = -k_B T ln P(q)
-P_q = hist + 1e-10  # Avoid log(0)
-A_q = -1 / beta * np.log(P_q)
+A_q = -1 / beta * np.log(P_q + 1e-20)
+
 
 # Plot the free energy profile
 fig, ip = plt.subplots()
-ip.plot(bin_centers, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
+ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
 ip.set_xlabel('q')
 ip.set_ylabel('Free Energy A(q) ')
 ip.set_title('Free Energy Profile with beta = '+str(beta))
+
+
+
+
+
+
+#  # Compute the KDE of the q values with weights
+# kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
+# q_bins = np.linspace(-3, 3, 100)
+# P_q = kde(q_bins)
+
+
+# cx = np.cos(theta)
+# cy = np.sin(theta)
+# # Plot the free energy profile -- Shift so that the minimum A(q) is zero
+# ax[1].plot(q_bins, A_q - np.min(A_q), label=f'{cx:.2f} x + {cy:.2f} y')
+
+
+
+
+
+
+
+
+
+
 
 
 ############################################
@@ -190,9 +213,9 @@ ip.set_title('Free Energy Profile with beta = '+str(beta))
 
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
 trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
+
 xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
 xfa =np.linspace(-1.6,1.6,75)
-
 
 
 fig, axs = plt.subplots(1, 2)
@@ -206,9 +229,9 @@ axs[1].set_ylabel("$D(x)$")
 axs[1].grid()
 
 fig,axb = plt.subplots()
-axb.set_title("Free Energy (MLE)")
-axb.set_xlabel("$X$")
-axb.set_ylabel("$A_{MLE}(X)$")
+axb.set_title("Free Energy (MLE) along frame rotated by $ϑ = \pi/4$")
+axb.set_xlabel("$q$")
+axb.set_ylabel("$A_{MLE}(q)$")
 axb.grid()
 
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
@@ -236,7 +259,7 @@ for name,marker,color, transitioncls in zip(
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(bin_centers, A_q - A_q[100],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
+axb.plot(q_bins, A_q - A_q[50],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
 
 # axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
