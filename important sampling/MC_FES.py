@@ -4,10 +4,9 @@ from scipy.stats import gaussian_kde
 
 
 
-def MCFreeEnergy(q,V,theta,n_samples = 1000000,L= 2 ):
+def MCFreeEnergy(q,V,theta,n_samples = 1000000,L= 2 ,beta=1):
 
     # Importance sampling parameters
-    beta = 1.0         # Inverse temperature (1/k_B T)
     x_min, x_max = -L, L
     y_min, y_max = -L, L
 
@@ -33,7 +32,7 @@ def MCFreeEnergy(q,V,theta,n_samples = 1000000,L= 2 ):
 
     cx = np.cos(theta)
     cy = np.sin(theta)
-    return q_bins, A_q - np.min(A_q)
+    return q_bins, A_q
 
 
 
