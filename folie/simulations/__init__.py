@@ -124,3 +124,23 @@ class ABMD_2D_to_1DColvar_Simulator(BiasedSimulator):  # user must provide both 
         self.qmax_hist.append(np.copy(self.qmax))
 
         return (self.k * (self.qmax - q)).reshape(len(q), 1) * grad_q
+
+class ABMD_2D_to_1D_Back_Colvar_Simulator(BiasedSimulator):  # user must provide both colvar function and its gradient in colvar element
+    def __init__(self, stepper, dt, colvar, k=1, qstop=-np.infty, **kwargs):
+        super().__init__(stepper, dt, **kwargs)
+        self.qmin = None
+        self.k = k
+        self.qstop = qstop
+        self.qmin_hist = []
+        self.colvar = colvar
+
+    def _bias(self, xt):
+        q, grad_q = self.colvar(xt[:, 0], xt[:, 1])
+        if self.qmin is None:
+            self.qmin = np.copy(q)
+        else:
+            np.minimum(self.qmin, q, out=self.qmin)
+        np.maximum(self.qmin, self.qstop, out=self.qmin)
+        self.qmin_hist.append(np.copy(self.qmin))
+
+        return (self.k * (self.qmin - q)).reshape(len(q), 1) * grad_q
