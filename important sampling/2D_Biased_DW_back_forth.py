@@ -12,7 +12,7 @@ import folie as fl
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
 import scipy as sc
-from ..MC_FES import MCFreeEnergy
+from MC_FES import MCFreeEnergy
 
 x = np.linspace(-1.8, 1.8, 20)
 y = np.linspace(-1.8, 1.8, 20)
