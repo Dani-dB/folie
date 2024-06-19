@@ -43,9 +43,9 @@ ax.set_zlabel('$A(x,y)$', fontsize=18,rotation = 0)
 def q(theta, x, y):                                                                 # here to change angle of projection
     return np.cos(theta) * x + np.sin(theta) * y
                                                             
-theta=np.pi/18
+theta=np.pi/4
 def colvar(x, y):
-    theta = np.pi/18
+    theta = np.pi/4
     return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
 
@@ -292,8 +292,8 @@ axb.grid()
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_full_data)
 
-axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
-axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
+axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)), color='grey', marker="x",label="KramersMoyal")
+axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), color='grey',marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
 for name,marker,color, transitioncls in zip(
 ["Euler", "Elerian", "Kessler", "Drozdov"],
@@ -310,11 +310,11 @@ for name,marker,color, transitioncls in zip(
     res = estimator.fit_fetch(deepcopy(proj_full_data))
     res.remove_bias()
     print(name, res.coefficients)
-    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
-    axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
+    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
+    axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(q_bins, A_q - A_q[50],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
+    axb.plot(xfa, fes,marker,color=color, label=name)
+axb.plot(q_bins, A_q - np.min(A_q),color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
 
 # axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
