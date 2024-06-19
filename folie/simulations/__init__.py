@@ -126,7 +126,7 @@ class ABMD_2D_to_1DColvar_Simulator(BiasedSimulator):  # user must provide both 
         return (self.k * (self.qmax - q)).reshape(len(q), 1) * grad_q
 
 class ABMD_2D_to_1D_Back_Colvar_Simulator(BiasedSimulator):  # user must provide both colvar function and its gradient in colvar element
-    def __init__(self, stepper, dt, colvar, k=1, qstop=-np.infty, **kwargs):
+    def __init__(self, stepper, dt, colvar, k=1, qstop=-np.inf, **kwargs):
         super().__init__(stepper, dt, **kwargs)
         self.qmin = None
         self.k = k
