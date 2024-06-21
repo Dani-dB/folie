@@ -80,7 +80,7 @@ axb.set_title("Free Energy (MLE)")
 axb.set_xlabel("$X$")
 axb.set_ylabel("$A_{MLE}(X)$")
 axb.grid()
-axb.plot(xfa, free_energy(xfa.reshape(-1, 1)), label="Exact")
+axb.plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa)), label="Exact")
 
 n_knots= 4
 domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min , data.stats.max , n_knots).ravel())
@@ -102,7 +102,7 @@ for name,marker, transitioncls in zip(
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axs[0].plot(xfa,res.force(xfa.reshape(-1,1)),marker,label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker, label=name)
-    axb.plot(xfa, fes-fes[15],marker, label=name)
+    axb.plot(xfa, fes-np.min(fes),marker, label=name)
 axb.legend()  
 axs[0].legend()
 axs[1].legend()
