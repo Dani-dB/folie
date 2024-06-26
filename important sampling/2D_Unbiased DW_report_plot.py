@@ -108,7 +108,7 @@ def q(theta, x, y):                                                             
     return np.cos(theta) * x + np.sin(theta) * y
 # Choose unit versor of direction
 # theta = np.pi/8                                                                     # here to change angle of projection
-theta=np.pi/16
+theta=np.pi/4
 # u_norm = np.array([np.cos(theta), np.sin(theta)])
 w = np.empty_like(trj["x"][:, 0])
 s = np.empty_like(trj["x"][:, 0])
@@ -120,7 +120,7 @@ for n, trj in enumerate(data):
     proj_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
-    axs.set_ylabel("$w(t)$")
+    axs.set_ylabel("$q(t)$")
     axs.set_title("trajectory projected along q direction")
     axs.grid()
 
