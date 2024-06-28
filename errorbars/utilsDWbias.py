@@ -22,6 +22,7 @@ def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,plot=True):
 
 def Train_all_loop(model_simu,data,trainmodel):
     fig, axs = plt.subplots(1, 2)
+    fig, axf = plt.subplots()
     axs[0].set_title("Drift")
     axs[0].set_xlabel("$x$")
     axs[0].set_ylabel("$F(x)$")
@@ -61,16 +62,19 @@ def Train_all_loop(model_simu,data,trainmodel):
         res.remove_bias()
         axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)), marker=marker, label=name)
         axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)), marker=marker, label=name)
+        fes = fl.analysis.free_energy_profile_1d(res,xfa)
+        axf.plot(xfa,fes,marker=marker,label =name)
+    axf.legend()
     axs[0].legend()
     axs[1].legend()
-    return axs
+    return axs , axf
 
 def train_single_estimator(density,data,trainmodel):
     estimator = fl.LikelihoodEstimator(density(deepcopy(trainmodel)), n_jobs=4)
     res = estimator.fit_fetch(deepcopy(data))
     res.remove_bias()
 
-    return res
+    return deepcopy(res)
 
 
 def mean_Fes(estimator_fes,x):
@@ -91,7 +95,7 @@ def variance_Fes(estimator_fes,x, estimator_mean_fes=None):
         for replica_index in range(len(estimator_fes)):
             sum += (estimator_fes[replica_index][i]- estimator_mean_fes[i])**2 # sum over the replicas for the Euler estimator for the i-th point
         variancefes[i]= sum/(len(estimator_fes)-1)
-    return variance_Fes
+    return variancefes
 
 
 # err =np.empty_like(var_fes)

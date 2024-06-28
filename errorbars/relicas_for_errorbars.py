@@ -29,6 +29,13 @@ Eulfes, Elnfes,Kslfes,Drzfes = [],[],[], []
 
 xfa = np.linspace(-7,7,50)
 
+# data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,plot=False) 
+    
+# domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min, data.stats.max, 4).ravel())
+# trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
+# im1, im2 = utl.Train_all_loop(model_simu,data,trainmodel)
+# im2.plot(xfa,free_energy(xfa))
+plt.show()
 for i in range(n_replicas):
 
     data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,plot=False) 
@@ -39,43 +46,43 @@ for i in range(n_replicas):
     Eulres.append(utl.train_single_estimator(fl.EulerDensity,data,trainmodel))
     Eulfes.append(fl.analysis.free_energy_profile_1d(Eulres[i],xfa))
 
-    # Elnres.append(utl.train_single_estimator(fl.ElerianDensity,data,trainmodel))
-    # Elnfes.append(fl.analysis.free_energy_profile_1d(Elnres[i],xfa))
+    Elnres.append(utl.train_single_estimator(fl.ElerianDensity,data,trainmodel))
+    Elnfes.append(fl.analysis.free_energy_profile_1d(Elnres[i],xfa))
 
-    # Kslres.append(utl.train_single_estimator(fl.KesslerDensity,data,trainmodel))
-    # Kslfes.append(fl.analysis.free_energy_profile_1d(Kslres[i],xfa))
+    Kslres.append(utl.train_single_estimator(fl.KesslerDensity,data,trainmodel))
+    Kslfes.append(fl.analysis.free_energy_profile_1d(Kslres[i],xfa))
 
-    # Drzres.append(utl.train_single_estimator(fl.DrozdovDensity,data,trainmodel))
-    # Drzfes.append(fl.analysis.free_energy_profile_1d(Drzres[i],xfa))
+    Drzres.append(utl.train_single_estimator(fl.DrozdovDensity,data,trainmodel))
+    Drzfes.append(fl.analysis.free_energy_profile_1d(Drzres[i],xfa))
 
 # eulres= utl.train_single_estimator(fl.EulerDensity,data,trainmodel)
-for i in range(n_replicas):
-    print(Eulres[i].coefficients)
+# for i in range(n_replicas):
+#     print(Eulres[i].coefficients)
 
 ###########################################################################################################################
 ##                                                  COMPUTE ERRORBARS
 ###########################################################################################################################
 
-# calculate the mean fre energy surfaces 
+# calculate the mean free energy surfaces 
 
 Eul_mean_fes = utl.mean_Fes(Eulfes,xfa)
-# Eln_mean_fes = utl.mean_Fes(Elnfes,xfa)
-# Ksl_mean_fes = utl.mean_Fes(Kslfes,xfa)
-# Drz_mean_fes = utl.mean_Fes(Drzfes,xfa)
+Eln_mean_fes = utl.mean_Fes(Elnfes,xfa)
+Ksl_mean_fes = utl.mean_Fes(Kslfes,xfa)
+Drz_mean_fes = utl.mean_Fes(Drzfes,xfa)
 
 # calculate the mean fre energy surfaces 
 
-Eul_variance_fes = utl.mean_Fes(Eulfes,xfa)
-# Eln_variance_fes = utl.mean_Fes(Elnfes,xfa)
-# Ksl_variance_fes = utl.mean_Fes(Kslfes,xfa)
-# Drz_variance_fes = utl.mean_Fes(Drzfes,xfa)
+Eul_variance_fes = utl.variance_Fes(Eulfes,xfa,estimator_mean_fes=Eul_mean_fes)
+Eln_variance_fes = utl.variance_Fes(Elnfes,xfa)
+Ksl_variance_fes = utl.variance_Fes(Kslfes,xfa)
+Drz_variance_fes = utl.variance_Fes(Drzfes,xfa,Drz_mean_fes)
 
 # calculate standard deviation and emplot it or errorbars 
 
 Eul_std_fes = np.sqrt(Eul_variance_fes)
-# Eln_std_fes = np.sqrt(Elnfes)
-# Ksl_std_fes = np.sqrt(Kslfes)
-# Drz_std_fes = np.sqrt(Drzfes)
+Eln_std_fes = np.sqrt(Eln_variance_fes)
+Ksl_std_fes = np.sqrt(Ksl_variance_fes)
+Drz_std_fes = np.sqrt(Drz_variance_fes)
 
 
 # Eul_var_fes=np.empty_like(xfa)
@@ -85,17 +92,52 @@ Eul_std_fes = np.sqrt(Eul_variance_fes)
 #      var_fes[i]= sum/3
 
 # err = np.sqrt(var_fes)
-fig, ax =plt.subplots(figsize=(10,7))
-ax.set_xlabel('q')
-ax.set_ylabel('$\\langle A \\rangle$')
-ax.set_title("MLE for $\\langle A (q)\\rangle$ including errorbars")
+fig, ax =plt.subplots(2,2,figsize=(10,7))
+fig.suptitle("MLE for $\\langle A (q)\\rangle$ including errorbars")
+# ax.set_xlabel('q')
+# ax.set_ylabel('$\\langle A \\rangle$')
 
-for ff in range(n_replicas):
-    ax.plot(xfa,Eulfes[ff])
-ax.errorbar(xfa,Eul_mean_fes,yerr=Eul_std_fes, errorevery=(0,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy ")
 
-# ax.plot(xfa,fes1[0],label ='dataset 1',linewidth=1)
-# ax.plot(xfa,fes2[0],label ='dataset 2',linewidth=1)
-# ax.plot(xfa,fes3[0],label ='dataset 3',linewidth=1)
-# ax.plot(xfa,fes4[0],label ='dataset 4',linewidth=1)
+for index in range(n_replicas):
+    ax[0][0].plot(xfa,Eulfes[index],label='dataset '+str(index + 1))
+ax[0][0].errorbar(xfa,Eul_mean_fes,yerr=Eul_std_fes, errorevery=(0,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+ax[0][0].set_title('Euler')
+ax[0][0].plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))), label="Exact")
+ax[0][0].legend()
+
+for index in range(n_replicas):
+    ax[0][1].plot(xfa,Elnfes[index],label='dataset '+str(index + 1))
+ax[0][1].errorbar(xfa,Eln_mean_fes,yerr=Eln_std_fes, errorevery=(1,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+ax[0][1].set_title('Elerian')
+ax[0][1].plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))), label="Exact")
+ax[0][1].legend()
+
+for index in range(n_replicas):
+    ax[1][0].plot(xfa,Kslfes[index],label='dataset '+str(index + 1))
+ax[1][0].errorbar(xfa,Ksl_mean_fes,yerr=Ksl_std_fes, errorevery=(2,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+ax[1][0].set_title('Kessler')
+ax[1][0].plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))), label="Exact")
+ax[1][0].legend()
+
+for index in range(n_replicas):
+    ax[1][1].plot(xfa,Drzfes[index],label='dataset '+str(index + 1))
+ax[1][1].errorbar(xfa,Drz_mean_fes,yerr=Drz_std_fes, errorevery=(3,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+ax[1][1].set_title('Drozdov')
+ax[1][1].plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))), label="Exact")
+ax[1][1].legend()
+
+# for estimator_index in range(4):
+#     for index in range(n_replicas):
+#         ax[estimator_index].plot(xfa,Drzfes[index],label='dataset '+str(index + 1))
+#     ax[estimator_index].errorbar(xfa,Drz_mean_fes,yerr=Drz_std_fes, errorevery=(0,5),fmt='o',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+#     ax[estimator_index].set_title(names[estimator_index])
+#     ax[estimator_index].plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))), label="Exact")
+# ax[estimator_index].legend()
+
+
+# fig, P = plt.subplots()
+# P.errorbar(xfa,Eln_mean_fes,yerr=Eln_std_fes, errorevery=(1,5),fmt='2',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+
+
+
 plt.show()
