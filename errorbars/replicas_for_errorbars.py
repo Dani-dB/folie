@@ -13,12 +13,13 @@ drift_function = fl.functions.Polynomial(deg=3, coefficients=drift_coeff)
 diff_function = fl.functions.Polynomial(deg=0, coefficients=D)
 
 # Define model to simulate and type of simulator to use
+dt = 5e-4
 model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
-simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), 1e-3, k=10.0, xstop=6.0)
+simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
 
 # initialize positions
-ntraj = 30
-time_steps= 25000
+ntraj = 50
+time_steps= 35000
 q0 = np.empty(ntraj)
 for i in range(len(q0)):
     q0[i] = -6
@@ -27,7 +28,7 @@ n_replicas = 4
 Eulres, Elnres, Kslres, Drzres = [], [], [],[]
 Eulfes, Elnfes,Kslfes,Drzfes = [],[],[], []
 
-xfa = np.linspace(-7,7,50)
+xfa = np.linspace(-7,7,80)
 
 # data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,plot=False) 
     
@@ -135,9 +136,21 @@ ax[1][1].legend()
 # ax[estimator_index].legend()
 
 
-# fig, P = plt.subplots()
-# P.errorbar(xfa,Eln_mean_fes,yerr=Eln_std_fes, errorevery=(1,5),fmt='2',color ='red', ecolor='C4',alpha=1, label="Mean free energy")
+fig, P = plt.subplots()
+P.errorbar(xfa[0::4],Eul_mean_fes[0::4],yerr=Eul_std_fes[0::4],fmt='1',color ='C1', ecolor='C1',alpha=1, label="Euler M_Fes")
+P.errorbar(xfa[1::4],Eln_mean_fes[1::4],yerr=Eln_std_fes[1::4],fmt='2',color ='C2', ecolor='C2',alpha=1, label="Elerian M_Fes")
+P.errorbar(xfa[2::4],Ksl_mean_fes[2::4],yerr=Ksl_std_fes[2::4],fmt='3',color ='C3', ecolor='C3',alpha=1, label="Kessler M_Fes")
+P.errorbar(xfa[3::4],Drz_mean_fes[3::4],yerr=Drz_std_fes[3::4],fmt='4',color ='C4', ecolor='C4',alpha=1, label="Drodov M_Fes")
+P.plot(xfa, free_energy(xfa.reshape(-1, 1))-np.min(free_energy(xfa.reshape(-1, 1))),color='C0' ,label="Exact")
 
-
-
+P.legend()
+P.set_title("MLE for $\\langle A (q)\\rangle$ including errorbars")
+P.set_xlabel('q')
+P.set_ylabel('$\\langle A \\rangle$')
 plt.show()
+
+
+#  errorevery=(0,4)
+#  errorevery=(1,4)
+#  errorevery=(2,4)
+#  errorevery=(3,4)
