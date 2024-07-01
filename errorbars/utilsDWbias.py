@@ -3,15 +3,16 @@ import matplotlib.pyplot as plt
 import folie as fl
 from copy import deepcopy
 
-def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,plot=True):
+def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,savevery,plot=True):
 
     # Calculate Trajectory
-    data = simulator.run(time_steps, q0, save_every=1)
+    data = simulator.run(time_steps, q0, save_every=savevery)
     # Plot Trajectories
     if plot:
         fig, axs = plt.subplots()
+        abscissa = np.linspace(0,time_steps,len(data[0]["x"]))
         for n, trj in enumerate(data):
-            axs.plot(trj["x"])
+            axs.plot(abscissa,trj["x"])
             axs.set_xlabel("$timestep$")
             axs.set_ylabel("$x(t)$")
             axs.grid()
@@ -82,7 +83,7 @@ def mean_Fes(estimator_fes,x):
     for i in range(len(x)): #sum over xfa points
         sum=0
         for replica_index in range(len(estimator_fes)):
-            sum += estimator_fes[replica_index][i] # sum over the replicas for the Euler estimator for the i-th point
+            sum += estimator_fes[replica_index][i] # sum over the replicas for the given estimator for the i-th point
         meanfes[i]= sum/len(estimator_fes)
     return meanfes
 
@@ -93,7 +94,7 @@ def variance_Fes(estimator_fes,x, estimator_mean_fes=None):
     for i in range(len(x)): #sum over xfa points
         sum=0
         for replica_index in range(len(estimator_fes)):
-            sum += (estimator_fes[replica_index][i]- estimator_mean_fes[i])**2 # sum over the replicas for the Euler estimator for the i-th point
+            sum += (estimator_fes[replica_index][i]- estimator_mean_fes[i])**2 # sum over the replicas for the given estimator for the i-th point
         variancefes[i]= sum/(len(estimator_fes)-1)
     return variancefes
 

@@ -68,6 +68,8 @@ axs[1].set_ylabel("$D(x)$")
 axs[1].grid()
 
 xfa = np.linspace(-7.0, 7.0, 75)
+fig, axf = plt.subplots()
+
 model_simu.remove_bias()
 axs[0].plot(xfa, model_simu.drift(xfa.reshape(-1, 1)), label="Exact")
 axs[1].plot(xfa, model_simu.diffusion(xfa.reshape(-1, 1)), label="Exact")
@@ -102,6 +104,9 @@ for name, marker, transitioncls in zip(
     res.remove_bias()
     axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)), marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)), marker=marker, label=name)
+    fes = fl.analysis.free_energy_profile_1d(res,xfa)
+    axf.plot(xfa,fes,marker=marker,label =name)
+axf.legend()
 axs[0].legend()
 axs[1].legend()
 plt.show()
