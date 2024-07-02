@@ -19,59 +19,43 @@ model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_func
 simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0, seed=np.random.seed(1))
 
 # initialize positions
-ntraj = 30
+ntraj = 50
 time_steps= 35000
 q0 = np.empty(ntraj)
 for i in range(len(q0)):
     q0[i] = -6
 
-n_replicas = 1
+n_replicas = 5
 Eulres, Elnres, Kslres, Drzres = [], [], [],[]
 Eulfes, Elnfes,Kslfes,Drzfes = [],[],[], []
 
 xfa = np.linspace(-7,7,100)
-
 # data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,plot=False) 
-    
 # domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min, data.stats.max, 4).ravel())
 # trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
 # im1, im2 = utl.Train_all_loop(model_simu,data,trainmodel)
 # im2.plot(xfa,free_energy(xfa))
 
+# for i in range(n_replicas):
+#     model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
+#     simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
+#     data, discard= utl.Generate_Plot_Trajectories_Data(simulator,q0,time_steps,savevery=2,plot=True) 
+# # list = []
+# # for n,traj in enumerate(data):
+# #     print(np.transpose(traj["x"]).ravel().shape)
+# #     list.append(ntraj["x"]).ravel())
+# # input = np.asarray(list)
+# input = np.concatenate([data[n]["x"].ravel() for n in range(len(data))])
+# print(input.shape)
+# bins = np.arange(10)
+# kde = sc.stats.gaussian_kde(input)
+# xx = np.linspace(0, 9, 1000)
+# fig, ax = plt.subplots(figsize=(8,6))
+# ax.hist(input, density=True, bins=bins, alpha=0.3)
+# ax.plot(xx, kde(xx))
+# plt.show()
 
 
-
-
-
-
-for i in range(n_replicas):
-    model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
-    simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
-    data, discard= utl.Generate_Plot_Trajectories_Data(simulator,q0,time_steps,savevery=2,plot=True) 
-list = []
-for n,traj in enumerate(data):
-    list.append(np.transpose(traj["x"]).ravel())
-input = np.asarray(list)
-
-print(input.shape)
-exit()
-
-bins = np.arange(10)
-kde = sc.stats.gaussian_kde(input)
-xx = np.linspace(0, 9, 1000)
-fig, ax = plt.subplots(figsize=(8,6))
-ax.hist(input, density=True, bins=bins, alpha=0.3)
-ax.plot(xx, kde(xx))
-
-plt.plot()
-
-
-
-
-
-
-
-exit()
 for i in range(n_replicas):
 
     model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
