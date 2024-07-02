@@ -40,7 +40,9 @@ xfa = np.linspace(-7,7,100)
 
 for i in range(n_replicas):
 
-    data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,savevery=2,plot=True) 
+    model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
+    simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
+    data, discard= utl.Generate_Plot_Trajectories_Data(simulator,q0,time_steps,savevery=2,plot=True) 
     
     domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min, data.stats.max, 4).ravel())
     trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
