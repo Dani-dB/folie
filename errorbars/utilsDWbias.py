@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import folie as fl
 from copy import deepcopy
 
-def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,savevery,plot=True):
+def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,savevery=1,plot=True):
 
     # Calculate Trajectory
     data = simulator.run(time_steps, q0, save_every=savevery)
