@@ -1,9 +1,36 @@
+"""
+================================
+1D Double Well
+================================
+
+Definition of functions to generate data and a train models, meant to work more efficiently on a script who does this several times   
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import folie as fl
 from copy import deepcopy
 
 def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,savevery=1,plot=True):
+    """
+    Performs a simulation of trajectories when given the properly defined simulator object
+    if flag plot = True it also returns the trajectory plot 
+    Parameters
+    ------------
+        simulator: simulator class instance
+            simulator whose parameter are already defined 
+
+        q0: array
+            array of initial conditions
+
+        time_steps: int
+            number of timesteps 
+        saveevery: int
+            save_every paramter of simulator.run method 
+        plot: boolean
+            if True it also returns the trajectory plot, otherwise it returns a `None` object
+
+    """
 
     # Calculate Trajectory
     data = simulator.run(time_steps, q0, save_every=savevery)
@@ -71,14 +98,40 @@ def Train_all_loop(model_simu,data,trainmodel):
     return axs , axf
 
 def train_single_estimator(density,data,trainmodel):
+    """
+    Performs a training of the input `trainmodel` with the specified transition density
+
+    Parameters
+    ------------
+
+        density: TransitionDensity class instance
+            The transition density to use during the estimation 
+
+        data: folie.Trajectories() class instance 
+            The folie.Trajectories object storing the trajectory to analyze 
+
+        trainmodel: Model class instance
+            Object describing the model whose parameter are to train    
+
+    """
     estimator = fl.LikelihoodEstimator(density(deepcopy(trainmodel)), n_jobs=4)
     res = estimator.fit_fetch(deepcopy(data))
     res.remove_bias()
-
     return deepcopy(res)
 
 
 def mean_Fes(estimator_fes,x):
+    """
+    Return an array containing the mean free energy given a list of arrays of different free energy calculated over different replicas of the system 
+
+    Parameters
+    ------------
+        estimator_fes: list
+            List with different free energy arrays, one per each replica of the system. Each entry has to be of same lenght as `x`
+
+        x: array
+            array of the abscissa value, must be of the same length as any entry of `estimator_fes`
+    """
     meanfes = np.empty_like(x)
     for i in range(len(x)): #sum over xfa points
         sum=0
@@ -88,10 +141,25 @@ def mean_Fes(estimator_fes,x):
     return meanfes
 
 def variance_Fes(estimator_fes,x, estimator_mean_fes=None):
+    """
+    Return an array containing the sample variance of free energy given a list of arrays of different free energy calculated over different replicas of the system 
+
+    Parameters
+    ------------
+        estimator_fes: list
+            List with different free energy arrays, one per each replica of the system. Each entry has to be of same lenght as `x`
+
+        x: array
+            array of the abscissa value, must be of the same length as any entry of `estimator_fes`
+
+        estimator_mean_fes: array
+        mean free energy around which to compute the sample variance, default value is None
+        must be of same length as `x`
+    """
     variancefes = np.empty_like(x)
     if estimator_mean_fes is None: 
         estimator_mean_fes= mean_Fes(estimator_fes,x)
-    for i in range(len(x)): #sum over xfa points
+    for i in range(len(x)): #sum over x points
         sum=0
         for replica_index in range(len(estimator_fes)):
             sum += (estimator_fes[replica_index][i]- estimator_mean_fes[i])**2 # sum over the replicas for the given estimator for the i-th point

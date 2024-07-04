@@ -30,34 +30,10 @@ Eulres, Elnres, Kslres, Drzres = [], [], [],[]
 Eulfes, Elnfes,Kslfes,Drzfes = [],[],[], []
 
 xfa = np.linspace(-7,7,100)
-# data, discard= utl.Generate_Plot_Trajectories_Data(deepcopy(simulator),q0,time_steps,plot=False) 
-# domain = fl.MeshedDomain.create_from_range(np.linspace(data.stats.min, data.stats.max, 4).ravel())
-# trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
-# im1, im2 = utl.Train_all_loop(model_simu,data,trainmodel)
-# im2.plot(xfa,free_energy(xfa))
-
-# for i in range(n_replicas):
-#     model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
-#     simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
-#     data, discard= utl.Generate_Plot_Trajectories_Data(simulator,q0,time_steps,savevery=2,plot=True) 
-# # list = []
-# # for n,traj in enumerate(data):
-# #     print(np.transpose(traj["x"]).ravel().shape)
-# #     list.append(ntraj["x"]).ravel())
-# # input = np.asarray(list)
-# input = np.concatenate([data[n]["x"].ravel() for n in range(len(data))])
-# print(input.shape)
-# bins = np.arange(10)
-# kde = sc.stats.gaussian_kde(input)
-# xx = np.linspace(0, 9, 1000)
-# fig, ax = plt.subplots(figsize=(8,6))
-# ax.hist(input, density=True, bins=bins, alpha=0.3)
-# ax.plot(xx, kde(xx))
-# plt.show()
-
 
 for i in range(n_replicas):
-
+    
+    # Definition of model to simulate and simulator object 
     model_simu = fl.models.overdamped.Overdamped(drift_function, diffusion=diff_function)
     simulator = fl.simulations.ABMD_Simulator(fl.simulations.EulerStepper(model_simu), dt, k=10.0, xstop=6.0)
     data, discard= utl.Generate_Plot_Trajectories_Data(simulator,q0,time_steps,savevery=2,plot=True) 
@@ -106,18 +82,10 @@ Eln_std_fes = np.sqrt(Eln_variance_fes)
 Ksl_std_fes = np.sqrt(Ksl_variance_fes)
 Drz_std_fes = np.sqrt(Drz_variance_fes)
 
-
-# Eul_var_fes=np.empty_like(xfa)
-# err =np.empty_like(var_fes)
-# for i in range(len(xfa)):
-#      sum = ((fes1[0][i]-mean_fes[i])**2+(fes2[0][i]-mean_fes[i])**2 + (fes3[0][i]-mean_fes[i])**2 + (fes4[0][i]-mean_fes[i])**2 ) # sum over the replicas for the jth estimator 
-#      var_fes[i]= sum/3
-
-# err = np.sqrt(var_fes)
 fig, ax =plt.subplots(2,2,figsize=(10,7))
 fig.suptitle("MLE for $\\langle A (q)\\rangle$ including errorbars")
-# ax.set_xlabel('q')
-# ax.set_ylabel('$\\langle A \\rangle$')
+ax.set_xlabel('q')
+ax.set_ylabel('$\\langle A \\rangle$')
 
 
 for index in range(n_replicas):
