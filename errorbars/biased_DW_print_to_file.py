@@ -1,9 +1,7 @@
 """
 ================================
-1D Biased Double Well
+1D Biased Double Well to print data and trained stuff on a different file 
 ================================
-
-Estimation of an overdamped Langevin in presence of biased dynamics.
 """
 
 import numpy as np
@@ -43,11 +41,12 @@ q0 = np.empty(ntraj)
 for i in range(len(q0)):
     q0[i] = -6
 # Calculate Trajectory
-time_steps = 25000
+time_steps = 2000
 data = simulator.run(time_steps, q0, save_every=1)
 xmax = np.concatenate(simulator.xmax_hist, axis=1).T
 
 # Plot the resulting trajectories
+
 fig, axs = plt.subplots(1, 2)
 for n, trj in enumerate(data):
     axs[0].plot(trj["x"])
@@ -55,6 +54,51 @@ for n, trj in enumerate(data):
     axs[1].set_xlabel("$timestep$")
     axs[1].set_ylabel("$x(t)$")
     axs[1].grid()
+file = open("/home/dbersano/folie/errorbars/data/Traj.txt", "w")
+for j in range(len(data)):
+    file.write('Trajectory'+str(j+1)+'           ') 
+file.write('\n')
+file.close()
+file = open("/home/dbersano/folie/errorbars/data/Traj.txt", "a")
+
+for i in range(len(data[0]["x"])):
+    for n in range(len(data)):
+        file.write(str(float(data[n]["x"][i]))+' ')
+    file.write('\n')
+file.close()
+
+
+
+# Displaying the contents of the text file
+file = open("/home/dbersano/folie/errorbars/data/Traj.txt", "r")
+content = file.read()
+
+print("\nContent in file2.txt:\n", content)
+file.close()
+
+
+
+exit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 fig, axs = plt.subplots(1, 2)
 axs[0].set_title("Drift")
@@ -104,9 +148,7 @@ for name, marker, transitioncls in zip(
     res.remove_bias()
     axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)), marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)), marker=marker, label=name)
-    fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axf.plot(xfa,fes,marker=marker,label =name)
-axf.legend()
+   
 axs[0].legend()
 axs[1].legend()
 plt.show()
