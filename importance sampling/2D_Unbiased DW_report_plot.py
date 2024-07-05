@@ -2,8 +2,8 @@
 ================================
 2D Double Well
 ================================
-
-Estimation of an overdamped Langevin.
+Simulation of an unbiased 2D system in a symmetric double well potential. The fit is carried out on a 1D user-defined collective variable.
+Here the latter is specified throught the function `colvar` as an axis tilted with respect to the x coordinate by an angle theta
 """
 
 import numpy as np
@@ -13,7 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
 import scipy as sc
 from MC_FES import MCFreeEnergy
-""" Script for simulation of 2D double well and projection along user provided direction, No fitting is carried out   """
+
 x = np.linspace(-1.8, 1.8, 20)
 y = np.linspace(-1.8, 1.8, 20)
 input = np.transpose(np.array([x, y]))
@@ -106,6 +106,33 @@ for n, trj in enumerate(data):
 #########################################
 
 def colvar(x, y,only_proj=False):
+    r"""
+    Compute the collective variable and optionally its gradient.
+
+    Parameters:
+    -----------
+    x : numpy.ndarray
+        The x-coordinates of the samples.
+    y : numpy.ndarray
+        The y-coordinates of the samples.
+    only_proj : bool, optional
+        If True, only the collective variable projection q(x, y) is returned.
+        If False, both the projection and its gradient are returned.
+
+    Returns:
+    --------
+    q : numpy.ndarray
+        The collective variable values calculated as .  :math: `q = cos(\theta) * x + sin(\theta) * y`
+    gradient : numpy.ndarray, optional
+        The gradient of the collective variable, returned only if `only_proj` is False.
+        The gradient is an array [cos(theta), sin(theta)].
+
+    Notes:
+    ------
+    - The angle theta is fixed at π/4. Edit the first line to modify it
+    - If `only_proj` is True, the function returns the projection q(x, y).
+    - If `only_proj` is False, the function returns both the projection q(x, y) and its gradient.
+"""
     theta = np.pi/4                      # define the angle 
     if only_proj:
         return np.cos(theta) * x + np.sin(theta) * y
@@ -129,10 +156,6 @@ for n, trj in enumerate(data):
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
 #############################################################
-def Pot(x, y):
-    a = 5
-    b = 10
-    return a * (x**2 - 1)**2 + 0.5*b * y**2
 beta = 1.0
 q_bins, A_q =MCFreeEnergy(colvar=colvar,V=quartic2d.potential,beta =beta)
 # Plot the free energy profile

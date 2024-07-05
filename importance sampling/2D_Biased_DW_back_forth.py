@@ -1,9 +1,10 @@
 """
-================================
-2D Double Well BIASED
-================================
-
-Estimation of an overdamped Langevin.
+====================================
+2D Biased Double Well Back and forth 
+====================================
+Simulation of an biased 2D system in a symmetric double well potential. The biasing scheme and the fit take place on a 1D user-defined collective variable.
+Here the latter is specified throught the function `colvar` as an axis tilted with respect to the x coordinate by an angle theta
+The simulation is perfomed twice so starting from negative avalue of the collective variable and viceversa
 """
 
 import numpy as np
@@ -42,12 +43,38 @@ ax.set_zlabel('$A(x,y)$', fontsize=18,rotation = 0)
 
 
 def colvar(x, y,only_proj=False):
-    theta = np.pi/4
+    r"""
+    Compute the collective variable and optionally its gradient.
+
+    Parameters:
+    -----------
+    x : numpy.ndarray
+        The x-coordinates of the samples.
+    y : numpy.ndarray
+        The y-coordinates of the samples.
+    only_proj : bool, optional
+        If True, only the collective variable projection q(x, y) is returned.
+        If False, both the projection and its gradient are returned.
+
+    Returns:
+    --------
+    q : numpy.ndarray
+        The collective variable values calculated as .  :math: `q = cos(\theta) * x + sin(\theta) * y`
+    gradient : numpy.ndarray, optional
+        The gradient of the collective variable, returned only if `only_proj` is False.
+        The gradient is an array [cos(theta), sin(theta)].
+
+    Notes:
+    ------
+    - The angle theta is fixed at π/4. Edit the first line to modify it
+    - If `only_proj` is True, the function returns the projection q(x, y).
+    - If `only_proj` is False, the function returns both the projection q(x, y) and its gradient.
+"""
+    theta = np.pi/4                      # define the angle 
     if only_proj:
         return np.cos(theta) * x + np.sin(theta) * y
     else:
-        return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
-        
+        return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)        
 
 
 ####################################################################################################################################################################################
