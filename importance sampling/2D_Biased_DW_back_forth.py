@@ -55,7 +55,7 @@ def colvar(x, y):
 
 ####################################################################################################################################################################################
 dt=5e-4
-model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=diff_function)
+model_simu = fl.models.overdamped.Overdamped(drift=drift_quartic2d, diffusion=diff_function)
 simulator = fl.simulations.ABMD_2D_to_1DColvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=10.0, qstop=2.2)
 
 # initialize positions
@@ -151,7 +151,7 @@ ip.set_title('Free Energy Profile with beta = '+str(beta))
 
 ####################################################################################################################################################################################
 
-model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=diff_function)
+model_simu = fl.models.overdamped.Overdamped(drift=drift_quartic2d, diffusion=diff_function)
 simulator = fl.simulations.ABMD_2D_to_1D_Back_Colvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=10.0, qstop=-2.2)
 
 # initialize positions
@@ -267,14 +267,14 @@ for n,trj in enumerate(full_data):
 ########        ########        ########        ########        ########        ########        ########        ########        ########        ########        ########        ########        ########
 
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_full_data.stats.min, proj_full_data.stats.max, 4).ravel())
-trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
+trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain),has_bias=True)
 
 xfa = np.linspace(proj_full_data.stats.min, proj_full_data.stats.max, 75)
 xfa =np.linspace(-1.6,1.6,75)
 
 
 fig, axs = plt.subplots(1, 2)
-axs[0].set_title("Force")
+axs[0].set_title("Drift")
 axs[0].set_xlabel("$x$")
 axs[0].set_ylabel("$F(x)$")
 axs[0].grid()
@@ -289,12 +289,26 @@ axb.set_xlabel("$q$")
 axb.set_ylabel("$A_{MLE}(q)$")
 axb.grid()
 
-KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
-res_KM = KM_Estimator.fit_fetch(proj_full_data)
 
-axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)), color='grey', marker="x",label="KramersMoyal")
+
+# trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
+
+# name = "KramersMoyal"
+# estimator = fl.KramersMoyalEstimator(trainmodel)
+# res = estimator.fit_fetch(deepcopy(proj_full_data))
+# res.remove_bias()
+# axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)), "--", label=name)
+# axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)), "--", label=name)
+
+
+
+KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
+res_KM = KM_Estimator.fit_fetch(deepcopy(proj_full_data))
+res_KM.remove_bias()
+axs[0].plot(xfa, res_KM.drift(xfa.reshape(-1, 1)), color='grey', marker="x",label="KramersMoyal")
 axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), color='grey',marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
+
 for name,marker,color, transitioncls in zip(
 ["Euler", "Elerian", "Kessler", "Drozdov"],
     ["|","1","2","3"],
@@ -310,13 +324,11 @@ for name,marker,color, transitioncls in zip(
     res = estimator.fit_fetch(deepcopy(proj_full_data))
     res.remove_bias()
     print(name, res.coefficients)
-    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
+    axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axb.plot(xfa, fes,marker,color=color, label=name)
 axb.plot(q_bins, A_q - np.min(A_q),color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
-
-# axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
 
 axs[0].legend()
 axs[1].legend()

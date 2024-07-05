@@ -50,7 +50,7 @@ def colvar(x, y):
     return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
 dt=5e-4
-model_simu = fl.models.overdamped.Overdamped(force=drift_quartic2d, diffusion=diff_function)
+model_simu = fl.models.overdamped.Overdamped(drift=drift_quartic2d, diffusion=diff_function)
 simulator = fl.simulations.ABMD_2D_to_1DColvar_Simulator(fl.simulations.EulerStepper(model_simu), dt, colvar=colvar, k=25.0, qstop=2.2)
 
 # initialize positions
@@ -212,14 +212,14 @@ ip.set_title('Free Energy Profile with beta = '+str(beta))
 ############################################
 
 domain = fl.MeshedDomain.create_from_range(np.linspace(proj_data.stats.min, proj_data.stats.max, 4).ravel())
-trainmodel = fl.models.Overdamped(force = fl.functions.BSplinesFunction(domain),has_bias=True)
+trainmodel = fl.models.Overdamped(drift = fl.functions.BSplinesFunction(domain),has_bias=True)
 
 xfa = np.linspace(proj_data.stats.min, proj_data.stats.max, 75)
 xfa =np.linspace(-1.6,1.6,75)
 
 
 fig, axs = plt.subplots(1, 2)
-axs[0].set_title("Force")
+axs[0].set_title("Drift")
 axs[0].set_xlabel("$x$")
 axs[0].set_ylabel("$F(x)$")
 axs[0].grid()
@@ -237,7 +237,7 @@ axb.grid()
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
 
-axs[0].plot(xfa, res_KM.force(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
+axs[0].plot(xfa, res_KM.drift(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
 axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
 for name,marker,color, transitioncls in zip(
@@ -255,7 +255,7 @@ for name,marker,color, transitioncls in zip(
     res = estimator.fit_fetch(deepcopy(proj_data))
     res.remove_bias()
     print(name, res.coefficients)
-    axs[0].plot(xfa, res.force(xfa.reshape(-1, 1)),marker=marker, label=name)
+    axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)),marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
     axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
