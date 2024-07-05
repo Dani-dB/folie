@@ -40,13 +40,14 @@ ax.set_xticks([-1.5,0, 1.5])
 ax.set_zticks([0,10, 35])
 ax.set_zlabel('$A(x,y)$', fontsize=18,rotation = 0)
 
-def q(theta, x, y):                                                                 # here to change angle of projection
-    return np.cos(theta) * x + np.sin(theta) * y
-                                                            
-theta=np.pi/4
-def colvar(x, y):
+
+def colvar(x, y,only_proj=False):
     theta = np.pi/4
-    return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+    if only_proj:
+        return np.cos(theta) * x + np.sin(theta) * y
+    else:
+        return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+        
 
 
 ####################################################################################################################################################################################
@@ -120,8 +121,8 @@ proj_forw_data = fl.Trajectories(dt=forw_data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(forw_data):
     for i in range(len(trj["x"])):
-        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
-        s[i]= q(theta,trj["bias"][i][0],trj["bias"][i][1])
+        w[i]= colvar(trj["x"][i][0],trj["x"][i][1],only_proj=True)
+        s[i]= colvar(trj["bias"][i][0],trj["bias"][i][1],only_proj=True)
     proj_forw_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1)),bias = deepcopy(s.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_forw_data[n]["x"])
     axs.set_xlabel("$timesteps$")
@@ -133,12 +134,8 @@ for n, trj in enumerate(forw_data):
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
 # #############################################################
-def Pot(x, y):
-    a = 5
-    b = 10
-    return a * (x**2 - 1)**2 + 0.5*b * y**2
 beta = 1.0
-q_bins, A_q =MCFreeEnergy(q=q,V=Pot,theta=theta,beta =beta)
+q_bins, A_q =MCFreeEnergy(colvar=colvar,V=quartic2d.potential,beta =beta)
 
 ####################################################################################################################################################################################
 
@@ -210,8 +207,8 @@ proj_back_data = fl.Trajectories(dt=back_data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(back_data):
     for i in range(len(trj["x"])):
-        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
-        s[i]= q(theta,trj["bias"][i][0],trj["bias"][i][1])
+        w[i]= colvar(trj["x"][i][0],trj["x"][i][1],only_proj=True)
+        s[i]= colvar(trj["bias"][i][0],trj["bias"][i][1],only_proj=True)
     proj_back_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1)),bias = deepcopy(s.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_back_data[n]["x"])
     axs.set_xlabel("$timesteps$")
