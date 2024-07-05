@@ -41,14 +41,12 @@ ax.set_xticks([-1.5,0, 1.5])
 ax.set_zticks([0,10, 35])
 ax.set_zlabel('$A(x,y)$', fontsize=18,rotation = 0)
 
-def q(theta, x, y):                                                                 # here to change angle of projection
-    return np.cos(theta) * x + np.sin(theta) * y
-                                                               
-theta=np.pi/18
-def colvar(x, y):
-    theta = np.pi/18
-
-    return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+def colvar(x, y,only_proj=False):
+    theta = np.pi/4
+    if only_proj:
+        return np.cos(theta) * x + np.sin(theta) * y
+    else:
+        return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
 
 dt=5e-4
 model_simu = fl.models.overdamped.Overdamped(drift=drift_quartic2d, diffusion=diff_function)
@@ -121,8 +119,8 @@ proj_data = fl.Trajectories(dt=data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
-        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
-        s[i]= q(theta,trj["bias"][i][0],trj["bias"][i][1])
+        w[i]= colvar(trj["x"][i][0],trj["x"][i][1],only_proj=True)
+        s[i]= colvar(trj["bias"][i][0],trj["bias"][i][1],only_proj=True)
     proj_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1)),bias = deepcopy(s.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
@@ -130,62 +128,12 @@ for n, trj in enumerate(data):
     axs.set_title("trajectory projected along q direction")
     axs.grid()
 
-# #############################################################
-# # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
-# #############################################################
-# def Pot(x, y):
-#     a = 5
-#     b = 10
-#     return a * (x**2 - 1)**2 + 0.5*b * y**2
-
-# L = 2.0
-# x = np.linspace(-L, L, 100)
-# y = np.linspace(-L, L, 100)
-# X, Y = np.meshgrid(x, y)
-
-
-# # Importance sampling parameters
-# n_samples = 100000  # Number of samples
-# beta = 1         # Inverse temperature (1/k_B T)
-# x_min, x_max = -L, L
-# y_min, y_max = -L, L
-
-# # Generate uniform samples
-# x_samples = np.random.uniform(x_min, x_max, n_samples)
-# y_samples = np.random.uniform(y_min, y_max, n_samples)
-
-# # Compute Boltzmann weights
-# weights = np.exp(-beta * Pot(x_samples, y_samples))
-# print(weights.shape)
-# # Compute the collective variable values
-# q_values = q(theta, x_samples, y_samples)
-
-# # Weighted histogram the q values to estimate P(q)
-# # q_bins = np.linspace(-3, 3, 201)
-# # hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
-# # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-#  # Compute the KDE of the q values with weights
-# kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
-# q_bins = np.linspace(-3, 3, 101)
-# P_q = kde(q_bins)
-
-# # Compute the free energy A(q) = -k_B T ln P(q)
-# A_q = -1 / beta * np.log(P_q + 1e-20)
-
-
-
-
-
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
 # #############################################################
-def Pot(x, y):
-    a = 5
-    b = 10
-    return a * (x**2 - 1)**2 + 0.5*b * y**2
 beta = 1.0
-q_bins, A_q =MCFreeEnergy(q=q,V=Pot,theta=theta,beta =beta)
+q_bins, A_q =MCFreeEnergy(colvar=colvar,V=quartic2d.potential,beta =beta)
+
 # Plot the free energy profile
 fig, ip = plt.subplots()
 ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
