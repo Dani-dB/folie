@@ -182,9 +182,3 @@ def variance_Fes(estimator_fes,x, estimator_mean_fes=None):
             sum += (estimator_fes[replica_index][i]- estimator_mean_fes[i])**2 # sum over the replicas for the given estimator for the i-th point
         variancefes[i]= sum/(len(estimator_fes)-1)
     return variancefes
-
-
-# err =np.empty_like(var_fes)
-# for i in range(len(xfa)):
-#      sum = ((fes1[0][i]-mean_fes[i])**2+(fes2[0][i]-mean_fes[i])**2 + (fes3[0][i]-mean_fes[i])**2 + (fes4[0][i]-mean_fes[i])**2 ) # sum over the replicas for the jth estimator 
-#      var_fes[i]= sum/3
