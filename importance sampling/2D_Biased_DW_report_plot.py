@@ -12,8 +12,9 @@ import folie as fl
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
 import scipy as sc
+from MC_FES import MCFreeEnergy
 
-""" Script for simulation of 2D double well and projection along user provided direction, No fitting is carried out   """
+""" Script for simulation of 2D double well and projection along user provided direction  """
 x = np.linspace(-1.8, 1.8, 20)
 y = np.linspace(-1.8, 1.8, 20)
 input = np.transpose(np.array([x, y]))
@@ -129,50 +130,62 @@ for n, trj in enumerate(data):
     axs.set_title("trajectory projected along q direction")
     axs.grid()
 
+# #############################################################
+# # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
+# #############################################################
+# def Pot(x, y):
+#     a = 5
+#     b = 10
+#     return a * (x**2 - 1)**2 + 0.5*b * y**2
+
+# L = 2.0
+# x = np.linspace(-L, L, 100)
+# y = np.linspace(-L, L, 100)
+# X, Y = np.meshgrid(x, y)
+
+
+# # Importance sampling parameters
+# n_samples = 100000  # Number of samples
+# beta = 1         # Inverse temperature (1/k_B T)
+# x_min, x_max = -L, L
+# y_min, y_max = -L, L
+
+# # Generate uniform samples
+# x_samples = np.random.uniform(x_min, x_max, n_samples)
+# y_samples = np.random.uniform(y_min, y_max, n_samples)
+
+# # Compute Boltzmann weights
+# weights = np.exp(-beta * Pot(x_samples, y_samples))
+# print(weights.shape)
+# # Compute the collective variable values
+# q_values = q(theta, x_samples, y_samples)
+
+# # Weighted histogram the q values to estimate P(q)
+# # q_bins = np.linspace(-3, 3, 201)
+# # hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
+# # bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+#  # Compute the KDE of the q values with weights
+# kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
+# q_bins = np.linspace(-3, 3, 101)
+# P_q = kde(q_bins)
+
+# # Compute the free energy A(q) = -k_B T ln P(q)
+# A_q = -1 / beta * np.log(P_q + 1e-20)
+
+
+
+
+
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
-#############################################################
+# #############################################################
 def Pot(x, y):
     a = 5
     b = 10
     return a * (x**2 - 1)**2 + 0.5*b * y**2
-
-L = 2.0
-x = np.linspace(-L, L, 100)
-y = np.linspace(-L, L, 100)
-X, Y = np.meshgrid(x, y)
-
-
-# Importance sampling parameters
-n_samples = 100000  # Number of samples
-beta = 1         # Inverse temperature (1/k_B T)
-x_min, x_max = -L, L
-y_min, y_max = -L, L
-
-# Generate uniform samples
-x_samples = np.random.uniform(x_min, x_max, n_samples)
-y_samples = np.random.uniform(y_min, y_max, n_samples)
-
-# Compute Boltzmann weights
-weights = np.exp(-beta * Pot(x_samples, y_samples))
-print(weights.shape)
-# Compute the collective variable values
-q_values = q(theta, x_samples, y_samples)
-
-# Weighted histogram the q values to estimate P(q)
-# q_bins = np.linspace(-3, 3, 201)
-# hist, bin_edges = np.histogram(q_values, bins=q_bins, weights=weights, density=True)
-# bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
- # Compute the KDE of the q values with weights
-kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
-q_bins = np.linspace(-3, 3, 101)
-P_q = kde(q_bins)
-
-# Compute the free energy A(q) = -k_B T ln P(q)
-A_q = -1 / beta * np.log(P_q + 1e-20)
-
-
+beta = 1.0
+q_bins, A_q =MCFreeEnergy(q=q,V=Pot,theta=theta,beta =beta)
 # Plot the free energy profile
 fig, ip = plt.subplots()
 ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
@@ -180,32 +193,12 @@ ip.set_xlabel('q')
 ip.set_ylabel('Free Energy A(q) ')
 ip.set_title('Free Energy Profile with beta = '+str(beta))
 
-
-
-
-
-
-#  # Compute the KDE of the q values with weights
-# kde = sc.stats.gaussian_kde(q_values, weights=weights, bw_method='scott')
-# q_bins = np.linspace(-3, 3, 100)
-# P_q = kde(q_bins)
-
-
-# cx = np.cos(theta)
-# cy = np.sin(theta)
-# # Plot the free energy profile -- Shift so that the minimum A(q) is zero
-# ax[1].plot(q_bins, A_q - np.min(A_q), label=f'{cx:.2f} x + {cy:.2f} y')
-
-
-
-
-
-
-
-
-
-
-
+# Plot the free energy profile
+fig, ip = plt.subplots()
+ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
+ip.set_xlabel('q')
+ip.set_ylabel('Free Energy A(q) ')
+ip.set_title('Free Energy Profile with beta = '+str(beta))
 
 ############################################
              #  TRAINING  #
@@ -236,7 +229,7 @@ axb.grid()
 
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
-
+res_KM.remove_bias()
 axs[0].plot(xfa, res_KM.drift(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
 axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
@@ -258,10 +251,8 @@ for name,marker,color, transitioncls in zip(
     axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)),marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(q_bins, A_q - A_q[50],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
-
-# axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
+    axb.plot(xfa, fes - np.min(fes),marker,color=color, label=name)
+axb.plot(q_bins, A_q - np.min(A_q),color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
 
 axs[0].legend()
 axs[1].legend()

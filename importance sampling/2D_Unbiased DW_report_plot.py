@@ -169,10 +169,12 @@ axb.grid()
 
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(proj_data)
-
+res_KM.remove_bias()
 axs[0].plot(xfa, res_KM.drift(xfa.reshape(-1, 1)),  marker="x",label="KramersMoyal")
 axs[1].plot(xfa, res_KM.diffusion(xfa.reshape(-1, 1)), marker="x",label="KramersMoyal")
 print("KramersMoyal ", res_KM.coefficients)
+
+# Training with estimators
 for name,marker,color, transitioncls in zip(
     ["Euler", "Elerian", "Kessler", "Drozdov"],
         ["|","1","2","3"],
@@ -191,10 +193,8 @@ for name,marker,color, transitioncls in zip(
     axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)),marker=marker, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes-fes[37],marker,color=color, label=name)
-axb.plot(q_bins, A_q - A_q[50],color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
-
-# axb.plot(q,A-A[37],color="#bd041cff",label='Numerically integrated')
+    axb.plot(xfa, fes-np.min(fes),marker,color=color, label=name)
+axb.plot(q_bins, A_q - np.min(A_q),color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum of A(q) is zero
 
 axs[0].legend()
 axs[1].legend()

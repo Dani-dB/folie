@@ -129,6 +129,7 @@ for n, trj in enumerate(forw_data):
     axs.set_title("trajectory projected along q direction")
     axs.grid()
 
+
 #############################################################
 # CREATE REFERENCE FOR FREE ENERGY USING IMPORTANCE SAMPLING #
 # #############################################################
@@ -138,12 +139,6 @@ def Pot(x, y):
     return a * (x**2 - 1)**2 + 0.5*b * y**2
 beta = 1.0
 q_bins, A_q =MCFreeEnergy(q=q,V=Pot,theta=theta,beta =beta)
-# Plot the free energy profile
-fig, ip = plt.subplots()
-ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
-ip.set_xlabel('q')
-ip.set_ylabel('Free Energy A(q) ')
-ip.set_title('Free Energy Profile with beta = '+str(beta))
 
 ####################################################################################################################################################################################
 
@@ -290,18 +285,6 @@ axb.set_ylabel("$A_{MLE}(q)$")
 axb.grid()
 
 
-
-# trainmodel = fl.models.Overdamped(fl.functions.BSplinesFunction(domain), has_bias=True)
-
-# name = "KramersMoyal"
-# estimator = fl.KramersMoyalEstimator(trainmodel)
-# res = estimator.fit_fetch(deepcopy(proj_full_data))
-# res.remove_bias()
-# axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)), "--", label=name)
-# axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)), "--", label=name)
-
-
-
 KM_Estimator = fl.KramersMoyalEstimator(deepcopy(trainmodel))
 res_KM = KM_Estimator.fit_fetch(deepcopy(proj_full_data))
 res_KM.remove_bias()
@@ -327,7 +310,7 @@ for name,marker,color, transitioncls in zip(
     axs[0].plot(xfa, res.drift(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
     axs[1].plot(xfa, res.diffusion(xfa.reshape(-1, 1)),marker=marker,color=color, label=name)
     fes = fl.analysis.free_energy_profile_1d(res,xfa)
-    axb.plot(xfa, fes,marker,color=color, label=name)
+    axb.plot(xfa, fes-np.min(fes),marker,color=color, label=name)
 axb.plot(q_bins, A_q - np.min(A_q),color ="#bd041cff",label ="MC sampling")  # Shift so that the minimum A(q) is zero
 
 axs[0].legend()
