@@ -104,19 +104,21 @@ for n, trj in enumerate(data):
 #########################################
 #  PROJECTION ALONG CHOSEN COORDINATE  #
 #########################################
-def q(theta, x, y):                                                                 # here to change angle of projection
-    return np.cos(theta) * x + np.sin(theta) * y
-# Choose unit versor of direction
-# theta = np.pi/8                                                                     # here to change angle of projection
-theta=np.pi/4
-# u_norm = np.array([np.cos(theta), np.sin(theta)])
+
+def colvar(x, y,only_proj=False):
+    theta = np.pi/4                      # define the angle 
+    if only_proj:
+        return np.cos(theta) * x + np.sin(theta) * y
+    else:
+        return np.cos(theta) * x + np.sin(theta) * y, np.array([np.cos(theta),np.sin(theta)])  # need to return both colvar function q=q(x,y) and gradient (dq/dx,dq/dy)
+    
 w = np.empty_like(trj["x"][:, 0])
 s = np.empty_like(trj["x"][:, 0])
 proj_data = fl.Trajectories(dt=data[0]['dt'])
 fig, axs = plt.subplots()
 for n, trj in enumerate(data):
     for i in range(len(trj["x"])):
-        w[i]= q(theta,trj["x"][i][0],trj["x"][i][1])
+        w[i]= colvar(trj["x"][i][0],trj["x"][i][1],only_proj=True)
     proj_data.append(fl.Trajectory(trj['dt'], deepcopy(w.reshape(len(trj["x"][:, 0]), 1))))
     axs.plot(proj_data[n]["x"])
     axs.set_xlabel("$timesteps$")
@@ -132,7 +134,7 @@ def Pot(x, y):
     b = 10
     return a * (x**2 - 1)**2 + 0.5*b * y**2
 beta = 1.0
-q_bins, A_q =MCFreeEnergy(q=q,V=Pot,theta=theta,beta =beta)
+q_bins, A_q =MCFreeEnergy(colvar=colvar,V=quartic2d.potential,beta =beta)
 # Plot the free energy profile
 fig, ip = plt.subplots()
 ip.plot(q_bins, A_q - np.min(A_q))  # Shift so that the minimum A(q) is zero
