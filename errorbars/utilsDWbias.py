@@ -49,6 +49,23 @@ def Generate_Plot_Trajectories_Data(simulator, q0, time_steps,savevery=1,plot=Tr
     
 
 def Train_all_loop(model_simu,data,trainmodel):
+    """
+    Run the same analysis as foli/examples/toy_models/plot_1D_Double_Well.py
+    It returns only the plots
+
+    Parameters
+------------
+
+    model_simu: Model class instance
+        object who genearetd the data, used onl to plot the refernce values of drift and diffusion
+
+    data: folie.Trajectories() class instance 
+        The folie.Trajectories object storing the trajectory to analyze 
+
+    trainmodel: Model class instance
+        Object describing the model whose parameter are to train    
+
+    """
     fig, axs = plt.subplots(1, 2)
     fig, axf = plt.subplots()
     axs[0].set_title("Drift")
